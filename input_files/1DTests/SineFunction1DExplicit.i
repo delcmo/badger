@@ -1,0 +1,273 @@
+#
+#####################################################
+# Define some global parameters used in the blocks. #
+#####################################################
+#
+
+[GlobalParams]
+###### Other parameters #######
+order = FIRST
+viscosity_name = ENTROPY
+isJumpOn = true
+Ce = 1.
+isImplicit = false
+[]
+
+##############################################################################################
+#                                       FUNCTIONs                                            #
+##############################################################################################
+# Define functions that are used in the kernels and aux. kernels.                            #
+##############################################################################################
+
+[Functions]
+  [./ic]
+    type = ParsedFunction
+    value = sin(2*pi*x)
+  [../]
+[]
+
+#############################################################################
+#                          USER OBJECTS                                     #
+#############################################################################
+# Define the user object class that store the EOS parameters.               #
+#############################################################################
+
+[UserObjects]
+
+  [./JumpGradUS]
+    type = JumpGradientInterface
+    variable = us_aux
+    jump_name = jump_grad_us_aux
+  [../]
+
+#  [./Smoothing]
+#    type = SmoothingFunction
+#    variable = jump_grad_us_aux
+#    name_var = jump_grad_us_aux
+#  [../]
+
+[]
+
+###### Mesh #######
+[Mesh]
+  type = GeneratedMesh
+  dim = 1
+  nx = 128
+  xmin = 0
+  xmax = 1
+  block_id = '0'
+[]
+
+#############################################################################
+#                             VARIABLES                                     #
+#############################################################################
+# Define the variables we want to solve for: l=liquid phase and g=gas phase.#
+#############################################################################
+
+[Variables]
+  [./u]
+    family = LAGRANGE
+    scaling = 1e+3
+	[./InitialCondition]
+        type = FunctionIC
+        function = ic
+#value = 1
+	[../]
+  [../]
+[]
+
+############################################################################################################
+#                                            KERNELS                                                       #
+############################################################################################################
+# Define the kernels for time dependent, convection and viscosity terms. Same index as for variable block. #
+############################################################################################################
+
+[Kernels]
+
+  [./Time]
+    type = BadgerTime
+    variable = u
+  [../]
+
+  [./Flux]
+    type = BadgerFlux
+    variable = u
+  [../]
+
+  [./ViscFlux]
+    type = BadgerViscFlux
+    variable = u
+  [../]
+[]
+
+##############################################################################################
+#                                       AUXILARY VARIABLES                                   #
+##############################################################################################
+# Define the auxilary variables                                                              #
+##############################################################################################
+
+[AuxVariables]
+
+   [./s_aux]
+      family = LAGRANGE
+        [./InitialCondition]
+            type = FunctionIC
+            function = ic
+        [../]
+   [../]
+
+   [./us_aux]
+      family = LAGRANGE
+        [./InitialCondition]
+            type = FunctionIC
+            function = ic
+        [../]
+   [../]
+
+   [./mu_max_aux]
+    family = MONOMIAL
+    order = CONSTANT
+   [../]
+
+   [./mu_aux]
+    family = MONOMIAL
+    order = CONSTANT
+   [../]
+
+  [./jump_grad_us_aux]
+    family = MONOMIAL
+    order = CONSTANT
+  [../]
+[]
+
+##############################################################################################
+#                                       AUXILARY KERNELS                                     #
+##############################################################################################
+# Define the auxilary kernels for liquid and gas phases. Same index as for variable block.   #
+##############################################################################################
+
+[AuxKernels]
+
+  [./EntropyAK]
+    type = EntropyAux
+    variable = s_aux
+    u = u
+  [../]
+
+  [./UtimesEntropyAK]
+    type = UtimesEntropyAux
+    variable = us_aux
+    u = u
+    s = s_aux
+  [../]
+
+  [./MuMaxAK]
+    type = MaterialRealAux
+    variable = mu_max_aux
+    property = mu_max
+  [../]
+
+   [./MuAK]
+    type = MaterialRealAux
+    variable = mu_aux
+    property = mu
+   [../]
+
+[]
+
+##############################################################################################
+#                                       MATERIALS                                            #
+##############################################################################################
+# Define functions that are used in the kernels and aux. kernels.                            #
+##############################################################################################
+
+[Materials]
+#active = ''
+  [./EntViscMat]
+    type = BadgerComputeViscCoeff
+    block = '0'
+    u = u
+    s = s_aux
+    us = us_aux
+    jump_grad_us = jump_grad_us_aux
+    PPS_name = AverageEntropy
+  [../]
+
+[]
+
+##############################################################################################
+#                                     PPS                                                    #
+##############################################################################################
+# Define functions that are used in the kernels and aux. kernels.                            #
+##############################################################################################
+[Postprocessors]
+
+  [./AverageEntropy]
+    type = ElementAverageValue
+    variable = s_aux
+  [../]
+[]
+
+##############################################################################################
+#                               BOUNDARY CONDITIONS                                          #
+##############################################################################################
+# Define the functions computing the inflow and outflow boundary conditions.                 #
+##############################################################################################
+[BCs]
+#active = ' '
+  [./RightDBC]
+    type = DirichletBC
+    variable = u
+    value = 0.
+    boundary = 'left'
+  [../]
+
+  [./LeftDBC]
+    type = DirichletBC
+    variable = u
+    value = 0.
+    boundary = 'right'
+  [../]
+[]
+
+##############################################################################################
+#                                     EXECUTIONER                                            #
+##############################################################################################
+# Define the functions computing the inflow and outflow boundary conditions.                 #
+##############################################################################################
+
+[Executioner]
+  type = Transient   # Here we use the Transient Executioner
+  scheme = 'explicit-euler'
+  #string scheme = 'bdf2'
+  petsc_options = '-snes'
+  petsc_options_iname = '-pc_type'
+  petsc_options_value = 'ilu'
+  #num_steps = 100
+  end_time = 0.25
+  dt = 0.001
+  dtmin = 1e-9
+  #dtmax = 1e-5
+  l_tol = 1e-8
+  nl_rel_tol = 1e-5
+  nl_abs_tol = 1e-5
+  l_max_its = 54
+  nl_max_its = 30
+  [./Quadrature]
+    type = TRAP
+  [../]
+[]
+##############################################################################################
+#                                        OUTPUT                                              #
+##############################################################################################
+# Define the functions computing the inflow and outflow boundary conditions.                 #
+##############################################################################################
+
+[Output]
+  output_initial = true
+  file_base = SineFunction1DExplicit
+  postprocessor_screen = false
+  interval = 2
+  exodus = true
+  perf_log = true
+[]
