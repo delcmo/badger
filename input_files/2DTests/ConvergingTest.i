@@ -6,11 +6,11 @@
 
 [GlobalParams]
 ###### Other parameters #######
-order = FIRST
+order = SECOND
 viscosity_name = ENTROPY
 isJumpOn = false
 Ce = 1.
-
+family = LAGRANGE
 []
 
 #############################################################################
@@ -35,14 +35,14 @@ Ce = 1.
   type = GeneratedMesh
   uniform_refine = 0
   dim = 2
-  nx = 320
-  ny = 320
+  nx = 128
+  ny = 128
   xmin = 0
-  xmax = 3.14159
+  xmax = 1.
   ymin = 0
-  ymax = 3.14159
+  ymax = 1.
   block_id = '0'
-#elem_type = QUAD9
+  elem_type = QUAD8
 []
 
 #############################################################################
@@ -53,8 +53,7 @@ Ce = 1.
 
 [Variables]
   [./u]
-    family = LAGRANGE
-    scaling = 1e+1
+    scaling = 1e+2
 	[./InitialCondition]
         type = FunctionIC
         function = exact_fn
@@ -99,11 +98,13 @@ Ce = 1.
 
 [AuxVariables]
    [./s_aux]
-      family = LAGRANGE
+       family = LAGRANGE
+       order = FIRST
    [../]
 
    [./us_aux]
-      family = LAGRANGE
+       family = LAGRANGE
+       order = FIRST
    [../]
 
    [./mu_max_aux]
@@ -195,7 +196,7 @@ Ce = 1.
 [Postprocessors]
 
   [./AverageEntropy]
-    type = ElementAverageValue
+    type = NodalMaxValue # ElementAverageValue
     variable = s_aux
     execute_on = timestep_begin
   [../]
@@ -215,7 +216,8 @@ Ce = 1.
 [Functions]
   [./exact_fn]
     type = ParsedFunction
-    value=sin(x+y-t)+2.
+    #value=sin(x+y-t)+2.
+    value=sin(2*pi*x)*sin(2*pi*y)*t+3.
   [../]
 []
 
@@ -225,11 +227,26 @@ Ce = 1.
 # Define the functions computing the inflow and outflow boundary conditions.                 #
 ##############################################################################################
 [BCs]
-  [./RightDBC]
+active = 'Periodic'
+  [./FunctionDBC]
     type = FunctionDirichletBC
     variable = u
     function = exact_fn
     boundary = '0 1 2 3'
+  [../]
+  
+  [./DBC]
+    type = DirichletBC
+    variable = u
+    value = 3.
+    boundary = '0 1 2 3'
+  [../]
+  
+  [./Periodic]
+    [./all]
+      variable = u
+      auto_direction = 'x y'
+    [../]
   [../]
 []
 
@@ -247,6 +264,7 @@ Ce = 1.
     type = FDP
     full = true
     solve_type = 'PJFNK'
+    line_search = 'default'
 #petsc_options = '-snes_mf_operator -snes_ksp_ew'
 #petsc_options_iname = '-mat_fd_coloring_err  -mat_fd_type  -mat_mffd_type'
 #petsc_options_value = '1.e-12       ds             ds'
@@ -256,6 +274,7 @@ Ce = 1.
     type = SMP
     full = true
     solve_type = 'PJFNK'
+    line_search = 'default'
   [../]
 []
 
@@ -267,18 +286,20 @@ Ce = 1.
 
 [Executioner]
   type = Transient
-  scheme = 'bdf2' # 'implicit-rk'
-  end_time = 2.
-  #num_steps = 100
-  dt = 0.00625
+  scheme = 'bdf2' # 'implicit-rk2'
+  #rk_scheme = 'sdirk33'
+  #end_time = 0.1
+  num_steps = 50
+  dt = 0.00001
   dtmin = 1e-9
   l_tol = 1e-8
-  nl_rel_tol = 1e-5
-  nl_abs_tol = 1e-5
+  nl_rel_tol = 1e-6
+  nl_abs_tol = 1e-6
   l_max_its = 54
   nl_max_its = 10
   [./Quadrature]
-    type = TRAP
+    type = GAUSS
+    order = TENTH
   [../]
 []
 ##############################################################################################

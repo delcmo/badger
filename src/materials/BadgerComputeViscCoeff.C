@@ -34,6 +34,7 @@ BadgerComputeViscCoeff::BadgerComputeViscCoeff(const std::string & name, InputPa
     _u(_isImplicit ? coupledValue("u") : coupledValueOld("u")),
     _s(_isImplicit ? coupledValue("s") : coupledValueOld("s")),
     _s_old(_isImplicit ? coupledValueOld("s") : coupledValueOlder("s")),
+    _s_older(_isImplicit ? coupledValueOlder("s") : _zero),
     _grad_us(_isImplicit ? coupledGradient("us") : coupledGradientOld("us")),
     _grad_us_old(_isImplicit ? coupledGradientOld("us") : coupledGradientOlder("us")),
     // Jump of pressure and density gradients:
@@ -53,7 +54,9 @@ void
 BadgerComputeViscCoeff::initQpStatefulProperties()
 {
     // Determine h (length used in definition of first and second order viscosities):
-    Real _h = _current_elem->hmin() / _qrule->get_order();
+    Real _h = _current_elem->hmax() / _qrule->get_order();
+//    std::cout<<_h<<std::endl;
+//    _h = _current_elem->hmax();
     
     // Return the value of mu_old for the first time step:
     //_mu[_qp] = 0.5 * _h * std::fabs(_u[_qp]);
@@ -65,14 +68,15 @@ BadgerComputeViscCoeff::computeQpProperties()
 {
     // Determine h (length used in definition of first and second order viscosities):
     Real _h = _current_elem->hmin() / _qrule->get_order();
-    //std::cout<<"h="<<_h<<std::endl;
+//    std::cout<<"h="<<_h<<std::endl;
+//    std::cout<<"p="<<_qrule->get_order()<<std::endl;
     
     // Epsilon value normalization of unit vectors:
     Real _eps = std::sqrt(std::numeric_limits<Real>::min());
     
     // Get the pps value for pressure and velocity:
     Real _pps = _isImplicit ? std::max(getPostprocessorValueByName(_pps_name), _eps) : std::max(getPostprocessorValueOldByName(_pps_name), _eps);
-    //std::cout<<_pps<<std::endl;
+//    std::cout<<_pps<<std::endl;
     
     // Compute the first order viscosity:
     _mu_max[_qp] = 0.5 * _h * std::fabs(_u[_qp]);
@@ -81,25 +85,34 @@ BadgerComputeViscCoeff::computeQpProperties()
     // Compute the jump:
     Real _jump = (double)_isJumpOn * ( _isImplicit ? _jump_grad_u[_qp] : _jump_grad_u_old[_qp]);
     //std::cout<<"bool="<<(double)_isJumpOn<<std::endl;
-    //std::cout<<"jump="<<_jump<<std::endl;
+//    std::cout<<"jump="<<_jump<<std::endl;
     
     // Set a vector n (in 1D n(1,0,0), in 2D n(1,1,0) and in 3D n(1,1,1)):
-    Real _den = _dim == 2 ? 1 : 2;
-    RealVectorValue _n(1., (_dim-1)/_den, (_dim-1)*(_dim-2)/_den);
+    Real _den = _mesh.dimension() == 2 ? 1 : 2;
+    RealVectorValue _n(1., (_mesh.dimension()-1)/_den, (_mesh.dimension()-1)*(_mesh.dimension()-2)/_den);
     
-    // Compute the entropy residual (CN):
-    Real _residual = std::fabs( (_s[_qp] - _s_old[_qp]) / _dt + 0.5*_n*(_grad_us[_qp] + _grad_us_old[_qp])*2/3 );
-    //std::cout<<"residual="<<_residual<<std::endl;
-    //std::cout<<"pps="<<_pps<<std::endl;
-    //std::cout<<"_s="<<_s[_qp]<<std::endl;
+    // Compute the entropy residual (CN) or (BDF2):
+    Real _residual = 0.;
+    if (_isImplicit) {
+        Real _weight0 = (2.*_dt+_dt_old)/(_dt*(_dt+_dt_old));
+        Real _weight1 = -(_dt+_dt_old)/(_dt*_dt_old);
+        Real _weight2 = _dt/(_dt_old*(_dt+_dt_old));
+        _residual = std::fabs(_weight0*_s[_qp]+_weight1*_s_old[_qp]+_weight2*_s_older[_qp]+_n*_grad_us[_qp] );
+    }
+    else
+        _residual = std::fabs( (_s[_qp] - _s_old[_qp]) / _dt + 0.5*_n*(_grad_us[_qp] + _grad_us_old[_qp]) );
+//    std::cout<<"residual="<<_residual<<std::endl;
+//    std::cout<<"s old="<<_s_old[_qp]<<std::endl;
+//    std::cout<<"s="<<_s[_qp]<<std::endl;
     
     // Determine the max between jump and entropy residual, and normalize:
     //Real _resid_jump = std::max(_residual, _jump) / _pps;
     Real _resid_jump = (_residual + _jump) / _pps;
-    //std::cout<<"resid_jump="<<_resid_jump<<std::endl;
+//    std::cout<<"resid_jump="<<_h*_h*_resid_jump<<std::endl;
     
     // Return the value of the viscosity:
     _mu[_qp] =  std::min(_mu_max[_qp], _Ce*_h*_h*_resid_jump);
+//    _mu[_qp] = _h*_h*_h;
     //std::cout<<"min="<<std::min(_mu_max[_qp], _resid_jump)<<std::endl;
     //std::cout<<"mu="<<_mu[_qp]<<std::endl;
     //std::cout<<"ce="<<_Ce<<std::endl;

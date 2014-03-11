@@ -33,6 +33,7 @@ private:
     VariableValue & _u;
     VariableValue & _s;
     VariableValue & _s_old;
+    VariableValue & _s_older;
     VariableGradient & _grad_us;
     VariableGradient & _grad_us_old;
     

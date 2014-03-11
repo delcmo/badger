@@ -38,5 +38,5 @@ UtimesEntropyAux::UtimesEntropyAux(const std::string & name, InputParameters par
 Real
 UtimesEntropyAux::computeValue()
 {
-    return _u[_qp]*_s[_qp];
+    return _u[_qp]*_u[_qp]*_u[_qp]/3.;
 }

@@ -6,18 +6,11 @@
 
 [GlobalParams]
 ###### Other parameters #######
-order = FIRST
 viscosity_name = ENTROPY
-isJumpOn = true
-Ce = 1.
-
-###### ICs ##########
-upper_left_corner = -0.2
-upper_right_corner = -1.
-bottom_left_corner = 0.5
-bottom_right_corner = 0.8
-x_node = 0.5
-y_node = 0.5
+isJumpOn = false
+Ce = 0.
+order = SECOND
+family = LAGRANGE # HERMITE # LAGRANGE
 []
 
 #############################################################################
@@ -27,12 +20,12 @@ y_node = 0.5
 #############################################################################
 
 [UserObjects]
-
+active = ' '
   [./JumpGradUS]
     type = JumpGradientInterface
     variable = u
     jump_name = jump_grad_us_aux
-    execute_on = timestep_begin
+#    execute_on = timestep_begin
   [../]
 
 []
@@ -41,14 +34,12 @@ y_node = 0.5
 [Mesh]
   type = GeneratedMesh
   uniform_refine = 0
-  dim = 2
-  nx = 80
-  ny = 80
+  dim = 1
+  nx = 128
   xmin = 0
   xmax = 1
-  ymin = 0
-  ymax = 1
   block_id = '0'
+  elem_type = EDGE3
 []
 
 #############################################################################
@@ -59,10 +50,11 @@ y_node = 0.5
 
 [Variables]
   [./u]
-    family = LAGRANGE
     scaling = 1e+3
 	[./InitialCondition]
-        type = FourSquaresIC2D
+        type = ConstantIC # FunctionIC
+        value = 0.
+        #function = exact_fn
 	[../]
   [../]
 []
@@ -81,13 +73,19 @@ y_node = 0.5
   [../]
 
   [./Flux]
-    type = BadgerFlux
+    type = BadgerFluxNotIntegrated
     variable = u
   [../]
 
-  [./ViscFlux]
-    type = BadgerViscFlux
+#  [./ForcingTerm]
+#    type = BadgerForcingTerm
+#    variable = u
+#  [../]
+
+  [./ffn]
+    type = UserForcingFunction
     variable = u
+    function = forcing_fn
   [../]
 []
 
@@ -98,26 +96,26 @@ y_node = 0.5
 ##############################################################################################
 
 [AuxVariables]
-   [./s_aux]
-      family = LAGRANGE
-   [../]
+#active = ' '
+#   [./s_aux]
+#   [../]
 
-   [./us_aux]
-      family = LAGRANGE
-   [../]
+#   [./us_aux]
+#   [../]
 
-   [./mu_max_aux]
-    family = MONOMIAL
-    order = CONSTANT
-   [../]
+#   [./mu_max_aux]
+#        family = MONOMIAL
+#        order = CONSTANT
+#   [../]
 
-   [./mu_aux]
-    family = MONOMIAL
-    order = CONSTANT
-   [../]
+#   [./mu_aux]
+#    family = MONOMIAL
+#    order = CONSTANT
+#   [../]
 
   [./exact_sol_aux]
-    family = LAGRANGE
+      family = LAGRANGE
+      order = FIRST
   [../]
 
   [./jump_grad_us_aux]
@@ -133,35 +131,35 @@ y_node = 0.5
 ##############################################################################################
 [AuxKernels]
 
-  [./EntropyAK]
-    type = EntropyAux
-    variable = s_aux
-    u = u
-  [../]
+#  [./EntropyAK]
+#    type = EntropyAux
+#    variable = s_aux
+#    u = u
+#  [../]
 
-  [./UtimesEntropyAK]
-    type = UtimesEntropyAux
-    variable = us_aux
-    u = u
-    s = s_aux
-  [../]
+#  [./UtimesEntropyAK]
+#    type = UtimesEntropyAux
+#    variable = us_aux
+#    u = u
+#    s = s_aux
+#  [../]
 
-  [./MuMaxAK]
-    type = MaterialRealAux
-    variable = mu_max_aux
-    property = mu_max
-  [../]
+#  [./MuMaxAK]
+#    type = MaterialRealAux
+#    variable = mu_max_aux
+#    property = mu_max
+#  [../]
 
-   [./MuAK]
-    type = MaterialRealAux
-    variable = mu_aux
-    property = mu
-   [../]
+#   [./MuAK]
+#    type = MaterialRealAux
+#    variable = mu_aux
+#    property = mu
+#   [../]
 
-   [./ExactSolutionAK]
+   [./ExactSolution]
     type = FunctionAux
     variable = exact_sol_aux
-    function = ExactSolution
+    function = exact_fn
    [../]
 
 []
@@ -173,16 +171,16 @@ y_node = 0.5
 ##############################################################################################
 
 [Materials]
-#active = ''
-  [./EntViscMat]
-    type = BadgerComputeViscCoeff
-    block = '0'
-    u = u
-    s = s_aux
-    us = us_aux
-    jump_grad_us = jump_grad_us_aux
-    PPS_name = AverageEntropy
-  [../]
+#active = ' '
+#  [./EntViscMat]
+#    type = BadgerComputeViscCoeff
+#    block = '0'
+#    u = u
+#    s = s_aux
+#    us = us_aux
+#    #jump_grad_us = jump_grad_us_aux
+#    PPS_name = AverageEntropy
+#  [../]
 
 []
 
@@ -193,38 +191,28 @@ y_node = 0.5
 ##############################################################################################
 [Postprocessors]
 
-  [./AverageEntropy]
-    type = ElementAverageValue
-    variable = s_aux
-    execute_on = timestep_begin
-  [../]
+#  [./AverageEntropy]
+#    type = NodalMaxValue # ElementAverageValue
+#    variable = s_aux
+#    execute_on = timestep_begin
+#  [../]
 
-  [./L2ElementError]
+  [./l2_err]
     type = ElementL2Error
     variable = u
-    function = ExactSolution
-#execute_on = timestep_begin
+    function = exact_fn
   [../]
-
-  [./L1ElementError]
+  
+  [./l1_err]
     type = ElementL1Error
     variable = u
-    function = ExactSolution
-    #execute_on = timestep_begin
+    function = exact_fn
   [../]
-
-  [./L2NodalError]
-    type = NodalL2Error
-    variable = u
-    function = ExactSolution
-    #execute_on = timestep_begin
-  [../]
-
-  [./H1norm]
+  
+  [./h1_err]
     type = ElementH1Error
     variable = u
-    function = ExactSolution
-    #execute_on = timestep_begin
+    function = exact_fn
   [../]
 []
 
@@ -234,8 +222,22 @@ y_node = 0.5
 # Define functions that are used in the kernels and aux. kernels.                            #
 ##############################################################################################
 [Functions]
-  [./ExactSolution]
-    type = ExactSolution2D
+  [./forcing_fn]
+    type = ParsedFunction
+    #value = 4*(t*t*t) # *x-2*(t*t*t)
+    #value = exp(t)
+    #value = exp(t)*(1-x)*x*(1.+exp(t)*(1.-2*x))
+    value = sin(pi*x)*(1.+t*pi*t*cos(pi*x))
+    #value = sin(pi*x)*pi*cos(pi*x)
+  [../]
+
+  [./exact_fn]
+    type = ParsedFunction
+    #value=sin(x-t)+2.
+    #value=sin(2*pi*x)*t+3.
+    value=sin(pi*x)*t
+    #value = exp(t)*x*(1.-x)
+    #value = sin(pi*x)
   [../]
 []
 
@@ -245,29 +247,26 @@ y_node = 0.5
 # Define the functions computing the inflow and outflow boundary conditions.                 #
 ##############################################################################################
 [BCs]
-#active = ' '
-  [./RightDBC]
-    type = BadgersBCs
+active = 'FunctionDBC'
+  [./FunctionDBC]
+    type = FunctionDirichletBC
     variable = u
-    boundary = 'left'
+    function = exact_fn
+    boundary = '0 1'
   [../]
-
-  [./LeftDBC]
-    type = BadgersBCs
+  
+  [./DBC]
+    type = DirichletBC
     variable = u
-    boundary = 'right'
+    value = 0.
+    boundary = '0 1'
   [../]
-
-  [./TopBC]
-    type = BadgersBCs
-    variable = u
-    boundary = 'top'
-  [../]
-
-  [./BottomBC]
-    type = BadgersBCs
-    variable = u
-    boundary = 'bottom'
+  
+  [./Periodic]
+    [./all]
+        variable = u
+        auto_direction = 'x'
+    [../]
   [../]
 []
 
@@ -278,21 +277,25 @@ y_node = 0.5
 ##############################################################################################
 
 [Preconditioning]
-#  active = 'FDP_Newton'
-  active = 'SMP_Newton'
+#active = 'FDP_Newton'
+   active = 'SMP_Newton'
 
   [./FDP_Newton]
     type = FDP
     full = true
-    petsc_options = '-snes_mf_operator -snes_ksp_ew'
-    petsc_options_iname = '-mat_fd_coloring_err  -mat_fd_type  -mat_mffd_type'
-    petsc_options_value = '1.e-12       ds             ds'
+    solve_type = 'NEWTON'
+    line_search = 'default'
+#petsc_options = '-snes_mf_operator -snes_ksp_ew'
+#petsc_options_iname = '-mat_fd_coloring_err  -mat_fd_type  -mat_mffd_type'
+#petsc_options_value = '1.e-12       ds             ds'
   [../]
 
   [./SMP_Newton]
     type = SMP
     full = true
-    slve_type = 'PJFNK'
+    solve_type = 'NEWTON'
+    #petsc_options = '-ksp_monitor'
+    line_search = 'default'
   [../]
 []
 
@@ -304,50 +307,26 @@ y_node = 0.5
 
 [Executioner]
   type = Transient
-  string scheme = 'bdf2'
-  end_time = 0.1
-  #num_steps = 10
+  scheme = 'implicit-euler' # 'implicit-rk2'
+  #rk_scheme = 'sdirk33'
+  #end_time = 0.01
+# [./TimeStepper]
+#   type = FunctionDT
+#    time_t =  '0     0.1'
+#    time_dt = '2.5e-2  2.5e-2'
+#  [../]
+  num_steps = 100.
   dt = 0.001
   dtmin = 1e-9
   l_tol = 1e-8
-  nl_rel_tol = 1e-5
-  nl_abs_tol = 1e-5
-  l_max_its = 30
+  nl_rel_tol = 1e-12
+  nl_abs_tol = 1e-10
+  l_max_its = 54
   nl_max_its = 10
   [./Quadrature]
-    type = TRAP
+    type = GAUSS
+    order = TENTH
   [../]
-#  [./TimeStepper]
-#    type = FunctionDT
-#    time_t =  '0    1e-4  2e-4  0.5'
-#    time_dt = '1e-4 1e-4  1e-2  1e-2'
-#  [../]
-[]
-
-#[Adaptivity]
-#  initial_marker = errorfrac
-#  marker = errorfrac
-#  max_h_level = 5
-#  [./Indicators]
-#    [./error]
-#        type = GradientJumpIndicator
-#        #type = FluxJumpIndicator
-#        #type = LaplacianJumpIndicator
-#        variable = u
-#        block = '0'
-#    [../]
-#  [../]
-#  [./Markers]
-#    block = '0'
-#    [./errorfrac]
-#type = ErrorFractionMarker
-#        type = ErrorToleranceMarker
-#        refine = 0.5
-#        coarsen = 0.01
-#        indicator = error
-#    [../]
-#  [../]
-# [../]
 []
 ##############################################################################################
 #                                        OUTPUT                                              #
@@ -358,9 +337,9 @@ y_node = 0.5
 [Output]
   output_initial = true
   output_displaced = false
-  #file_base = FourSquaresIC2D
-  #postprocessor_screen = false
+  postprocessor_screen = true
   interval = 1
   exodus = true
   perf_log = true
+  #linear_residuals = true
 []

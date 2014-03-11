@@ -5,6 +5,7 @@
 // Kernels
 #include "BadgerTime.h"
 #include "BadgerFlux.h"
+#include "BadgerFluxNotIntegrated.h"
 #include "BadgerViscFlux.h"
 #include "BadgerForcingTerm.h"
 // Auxkernels
@@ -24,6 +25,7 @@
 #include "ExactSolution1D.h"
 // Postprocessors
 #include "ElementL1Error.h"
+#include "InviscidTimeStepLimit.h"
 
 template<>
 InputParameters validParams<BadgerApp>()
@@ -62,6 +64,7 @@ BadgerApp::registerObjects(Factory & factory)
     // Kernels:
     registerKernel(BadgerTime);
     registerKernel(BadgerFlux);
+    registerKernel(BadgerFluxNotIntegrated);
     registerKernel(BadgerViscFlux);
     registerKernel(BadgerForcingTerm);
     // Auxkernels
@@ -81,6 +84,7 @@ BadgerApp::registerObjects(Factory & factory)
     registerFunction(ExactSolution1D);
     // Postprocessors:
     registerPostprocessor(ElementL1Error);
+    registerPostprocessor(InviscidTimeStepLimit);
 }
 
 void

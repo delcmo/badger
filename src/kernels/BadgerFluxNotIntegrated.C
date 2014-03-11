@@ -12,30 +12,32 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#include "BadgerFlux.h"
+#include "BadgerFluxNotIntegrated.h"
 
 /**
 This Kernel computes the flux for Burger's equations.
 */
 template<>
-InputParameters validParams<BadgerFlux>()
+InputParameters validParams<BadgerFluxNotIntegrated>()
 {
   InputParameters params = validParams<Kernel>();
     params.addParam<bool>("isImplicit", true, "is the temporal integrator scheme is implicit?");
   return params;
 }
 
-BadgerFlux::BadgerFlux(const std::string & name,
+BadgerFluxNotIntegrated::BadgerFluxNotIntegrated(const std::string & name,
                        InputParameters parameters) :
   Kernel(name, parameters),
     _isImplicit(getParam<bool>("isImplicit")),
-    _u_old(_isImplicit ? _zero : valueOld())
+    _u_old(_isImplicit ? _zero : valueOld()),
+    _grad_u_old(_isImplicit ? _grad_zero : gradientOld())
 {}
 
-Real BadgerFlux::computeQpResidual()
+Real BadgerFluxNotIntegrated::computeQpResidual()
 {
     // Implicit or explicit scheme:
     Real _u_var = (1-(double)_isImplicit)*_u_old[_qp] + (double)_isImplicit*_u[_qp];
+    RealVectorValue _grad_u_var = (1-(double)_isImplicit)*_grad_u_old[_qp] + (double)_isImplicit*_grad_u[_qp];
     
     // Set a vector n (in 1D n(1,0,0), in 2D n(1,1,0) and in 3D n(1,1,1)):
     Real _den = _mesh.dimension() == 2 ? 1 : 2;
@@ -43,13 +45,13 @@ Real BadgerFlux::computeQpResidual()
     //std::cout<<_n<<std::endl;
     
     // Compute the flux:
-    Real _flux = 0.5 * _u_var * _u_var;
+    RealVectorValue _flux = _u_var * _grad_u_var;
     
     // Return the value of the flux:
-    return -_flux * (_n * _grad_test[_i][_qp]);
+    return _flux * (_n * _test[_i][_qp]);
 }
 
-Real BadgerFlux::computeQpJacobian()
+Real BadgerFluxNotIntegrated::computeQpJacobian()
 {
     if (_isImplicit) {
         // Set a vector n (in 1D n(1,0,0), in 2D n(1,1,0) and in 3D n(1,1,1)):
@@ -57,13 +59,13 @@ Real BadgerFlux::computeQpJacobian()
         RealVectorValue _n(1., (_mesh.dimension()-1)/_den, (_mesh.dimension()-1)*(_mesh.dimension()-2)/_den);
     
         // Return the value of the jacobian:
-        return ( -_u[_qp] * _phi[_j][_qp] * (_n * _grad_test[_i][_qp]) );
+        return ( _phi[_j][_qp] * _grad_u[_qp] + _u[_qp] * _grad_phi[_j][_qp] ) * _n * _test[_i][_qp];
     }
     else
         return 0.;
 }
 
-Real BadgerFlux::computeQpOffDiagJacobian( unsigned int _jvar)
+Real BadgerFluxNotIntegrated::computeQpOffDiagJacobian( unsigned int _jvar)
 { 
     return ( 0 );
 }
