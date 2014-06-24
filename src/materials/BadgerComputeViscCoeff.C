@@ -9,7 +9,7 @@ InputParameters validParams<BadgerComputeViscCoeff>()
     // is implcit:
     params.addParam<bool>("isImplicit", true , "implicit or explicit schemes.");
     // Boolean for jumps:
-    params.addParam("isJumpOn", true, "Is jump on?.");
+    params.addParam<bool>("isJumpOn", true, "Is jump on?.");
     // Coupled variables:
     params.addRequiredCoupledVar("u", "Variable it is solved for.");
     params.addRequiredCoupledVar("s", "Entropy function.");
