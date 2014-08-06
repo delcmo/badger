@@ -67,7 +67,7 @@ void
 BadgerComputeViscCoeff::computeQpProperties()
 {
     // Determine h (length used in definition of first and second order viscosities):
-    Real _h = _current_elem->hmin() / _qrule->get_order();
+    Real _h = _current_elem->hmax();// / _qrule->get_order();
 //    std::cout<<"h="<<_h<<std::endl;
 //    std::cout<<"p="<<_qrule->get_order()<<std::endl;
     

@@ -37,7 +37,7 @@ InputParameters validParams<BadgerApp>()
 BadgerApp::BadgerApp(const std::string & name, InputParameters parameters) :
     MooseApp(name, parameters)
 {
-  srand(libMesh::processor_id());
+  srand(processor_id());
   
   Moose::registerObjects(_factory);
   ElkApp::registerObjects(_factory);

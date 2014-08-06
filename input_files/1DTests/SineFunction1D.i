@@ -7,9 +7,9 @@
 [GlobalParams]
 ###### Other parameters #######
 order = FIRST
-viscosity_name = FIRST_ORDER
+viscosity_name = ENTROPY
 isJumpOn = true
-Ce = 1.
+Ce = 0.
 
 []
 
@@ -163,11 +163,11 @@ Ce = 1.
     property = mu
    [../]
 
-  [./ExactSolutionAK]
-    type = FunctionAux
-    variable = exact_sol_aux
-    function = ExactSolution
-  [../]
+#  [./ExactSolutionAK]
+#    type = FunctionAux
+#    variable = exact_sol_aux
+#    function = ExactSolution
+#  [../]
 
 []
 
@@ -244,8 +244,8 @@ Ce = 1.
 ##############################################################################################
 
 [Preconditioning]
-#active = 'FDP_Newton'
-active = 'SMP_Newton'
+active = 'FDP_Newton'
+#active = 'SMP_Newton'
 
   [./FDP_Newton]
     type = FDP
@@ -288,6 +288,7 @@ active = 'SMP_Newton'
   nl_max_its = 30
   [./Quadrature]
     type = TRAP
+    order = SECOND
   [../]
 []
 ##############################################################################################
@@ -296,7 +297,7 @@ active = 'SMP_Newton'
 # Define the functions computing the inflow and outflow boundary conditions.                 #
 ##############################################################################################
 
-[Output]
+[Outputs]
   output_initial = true
 #file_base = SineFunction1D
   postprocessor_screen = false

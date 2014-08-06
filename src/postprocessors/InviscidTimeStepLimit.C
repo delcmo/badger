@@ -39,7 +39,8 @@ InviscidTimeStepLimit::execute()
 Real
 InviscidTimeStepLimit::getValue()
 {
-  Parallel::min(_value);
+//  Parallel::min(_value);
+    gatherMin(_value);
   return _value;
 }
 
