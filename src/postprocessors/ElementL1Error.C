@@ -33,7 +33,7 @@ ElementL1Error::ElementL1Error(const std::string & name, InputParameters paramet
 Real
 ElementL1Error::getValue()
 {
-  return std::sqrt(ElementIntegralPostprocessor::getValue());
+  return ElementIntegralPostprocessor::getValue();
 }
 
 Real

@@ -22,7 +22,7 @@ Ce = 1.
 [Functions]
   [./ic]
     type = ParsedFunction
-    value = sin(2*pi*x)*sin(2*pi*y)
+    value = sin(2*pi*x) # *sin(2*pi*y)
   [../]
 []
 
@@ -219,16 +219,16 @@ Ce = 1.
   [../]
 
   [./TopBC]
-    type = DirichletBC
+    type = BadgersBCs # DirichletBC
     variable = u
-    value = 0.
+#    value = 0.
     boundary = 'top'
   [../]
 
   [./BottomBC]
-    type = DirichletBC
+    type = BadgersBCs # DirichletBC
     variable = u
-    value = 0.
+#    value = 0.
     boundary = 'bottom'
   [../]
 []
@@ -253,7 +253,8 @@ Ce = 1.
   [./SMP_Newton]
     type = SMP
     full = true
-    petsc_options = '-snes'
+    solve_type = PJFNK
+#    petsc_options = '-snes'
   [../]
 []
 
@@ -269,16 +270,24 @@ Ce = 1.
   string scheme = 'bdf2'
   #num_steps = 200
   end_time = 0.25
-  dt = 1e-3
+  dt = 1e-2
   dtmin = 1e-9
   #dtmax = 1e-5
   l_tol = 1e-8
   nl_rel_tol = 1e-5
   nl_abs_tol = 1e-5
-  l_max_its = 54
-  nl_max_its = 30
+  l_max_its = 20
+  nl_max_its = 10
+
+  [./TimeStepper]
+    type = FunctionDT
+    time_t =  '0    0.25'
+    time_dt = '1e-3 1e-3'
+  [../]
+
   [./Quadrature]
-    type = TRAP
+    type = GAUSS
+    order = SECOND
   [../]
 []
 ##############################################################################################
@@ -287,11 +296,11 @@ Ce = 1.
 # Define the functions computing the inflow and outflow boundary conditions.                 #
 ##############################################################################################
 
-[Output]
+[Outputs]
   output_initial = true
 #file_base = SineFunction2D
-  postprocessor_screen = false
-  interval = 2
+#  postprocessor_screen = false
+  interval = 1
   exodus = true
-  perf_log = true
+#  perf_log = true
 []
